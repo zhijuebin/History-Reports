@@ -97,38 +97,43 @@ class GenerateExceptionUserCsv(object):
     def _fun_if_unusual(self, x):
         according = x.split('||')
         physical_odometer_km = according[0]
-        odometer_km = according[1]
+        # odometer_km = according[1]
+        event_type = according[2]
         if physical_odometer_km == '':
-            return 1 if float(odometer_km) <= 0 else 0
-        return 1 if float(physical_odometer_km) <= 0 else 0
+            return 0
+            # return 1 if float(odometer_km) <= 0 else 0
+        return 1 if float(physical_odometer_km) <= 0 and event_type not in self.event_exclude_set else 0
 
 
     def _fun_under_zero(self, x):
         according = x.split('||')
         physical_odometer_km = according[0]
-        odometer_km = according[1]
+        # odometer_km = according[1]
+        event_type = according[2]
         if physical_odometer_km == '':
-            return 1 if float(odometer_km) <= 0 else 0
-        return 1 if float(physical_odometer_km) < 0 else 0
+            return 0
+            # return 1 if float(odometer_km) <= 0 else 0
+        return 1 if float(physical_odometer_km) < 0 and event_type not in self.event_exclude_set else 0
 
 
     def _cal_proportion(self, x):
         logs_number = x.split('||')[0]
         unusual_number = x.split('||')[1]
 
-        return str(round(float(unusual_number) / float(logs_number), 2) * 100) + '%' if float(logs_number) != 0 else '-'
+        return str(round(float(unusual_number) / float(logs_number), 3) * 100) + '%' if float(logs_number) != 0 else '-'
 
     def _cal_under_zero_proportion(self, x):
         logs_number = x.split('||')[0]
         under_zero_number = x.split('||')[1]
 
-        return str(round(float(under_zero_number) / float(logs_number), 2) * 100) + '%' if float(
+        return str(round(float(under_zero_number) / float(logs_number), 3) * 100) + '%' if float(
             logs_number) != 0 else '-'
 
 
     def _process_add_unusual_according(self):
         self.history_df['if_unusual_according'] = self.history_df.physical_odometer_km.apply(
-            lambda x: str(x) if x == x else '') + self.history_df.odometer_km.apply(lambda x: '||' + str(x))
+            lambda x: str(x) if x == x else '') + self.history_df.odometer_km.apply(lambda x: '||' + str(x)) + \
+            self.history_df.event_type.apply(lambda x: '||' + x)
 
 
     def _process_add_unusual_flag(self):
@@ -189,7 +194,7 @@ class GenerateExceptionUserCsv(object):
 
             'event_number': len(x.event_type) if max(x.event_type) != '-' else '-',
             'event_proportion': '-' if max(x.event_type) == '-' else str(
-                round(len(x.event_type) / float(max(x.logs_number)), 2) * 100) + '%'
+                round(len(x.event_type) / float(max(x.logs_number)), 3) * 100) + '%'
         })).reset_index()
 
 
@@ -217,11 +222,12 @@ class GenerateExceptionUserCsv(object):
 
 
     def __init__(self, csv_path, user_df, history_df, account_df):
+        self.event_exclude_set = set(['DiagSyncClear', 'DiagMissingClear', 'MalSyncClear'])
         self.csv_path = csv_path
         self.user_df = user_df
 
         self.history_df = history_df
-        self.history_df = self.history_df[self.history_df.physical_odometer_km.apply(lambda x: x == x)]
+        self.history_df['event_type'] = self.history_df.event_type.apply(lambda x: x if x==x else '-')
 
         self.account_df = account_df
 
